@@ -8,14 +8,15 @@
 - make
 
 ```sh
-$ make all
+make all
 ```
 
 ## Run
 
 ```sh
 # parallel program
-$ mpiexec -n 4 ./bin/mpi assets/aybu.png image_out.png
+mpiexec -n 4 ./bin/mpi assets/aybu.png image_out.png
+
 # sequential program
-$ ./bin/seq assets/aybu.png image_out.png
+./bin/seq assets/aybu.png image_out.png
 ```
