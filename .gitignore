@@ -1,0 +1,9 @@
+# binary folder
+bin/
+
+# build files
+out/
+
+# compiler cache
+.clangd/
+compile_commands.json
