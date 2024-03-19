@@ -21,7 +21,6 @@ void apply_sobel_operator(uint8_t* input_image, int width, int height,
 
   int i, j, x, y, pixel;
   int gx, gy;
-  int sobel_x, sobel_y;
   int magnitude;
 
   for (i = 1; i < height - 1; i++) {
