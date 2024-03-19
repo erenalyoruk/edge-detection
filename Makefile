@@ -6,7 +6,6 @@ LDFLAGS :=
 LDLIBS := -lm
 
 all: build
-	cp assets/* bin/
 
 build: bin/mpi bin/seq
 
