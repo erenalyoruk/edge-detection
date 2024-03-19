@@ -1,7 +1,7 @@
 CC := gcc
 MPICC := mpicc
 
-CFLAGS := -Wall -Wextra -Iinclude
+CFLAGS := -Wall -Wextra -isystem include
 LDFLAGS :=
 LDLIBS := -lm
 
