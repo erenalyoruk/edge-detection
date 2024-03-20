@@ -1,11 +1,13 @@
 #include "sobel.h"
 
-const int SOBEL_KERNEL_X[3][3] = {{-1, 0, 1}, {-2, 0, 2}, {-1, 0, 1}};
-const int SOBEL_KERNEL_Y[3][3] = {{-1, -2, -1}, {0, 0, 0}, {1, 2, 1}};
+static const int SOBEL_KERNEL_X[3][3] = {{-1, 0, 1}, {-2, 0, 2}, {-1, 0, 1}};
+static const int SOBEL_KERNEL_Y[3][3] = {{-1, -2, -1}, {0, 0, 0}, {1, 2, 1}};
 
 void apply_sobel_operator(unsigned char* input_image, int width, int height,
                           unsigned char* output_image) {
   double gradient = 0.0;
+
+  memset(output_image, 0, width * height);
 
   for (int i = 1; i < height - 1; i++) {
     for (int j = 1; j < width - 1; j++) {
