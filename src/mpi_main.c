@@ -124,6 +124,15 @@ int main(int argc, char* argv[]) {
   clock_t end = clock();
   printf("Elapsed time: %lf\n", (double)(end - start) / CLOCKS_PER_SEC);
 
+  clock_t total = end - start;
+  clock_t max;
+
+  MPI_Reduce(&total, &max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
+  if (rank == 0) {
+    printf("Max: %lf\n", (double)max / CLOCKS_PER_SEC);
+  }
+
   // Gather the results from all processes to the root process
   MPI_Gather(local_output_image, width * chunk_size, MPI_UNSIGNED_CHAR,
              output_image, width * chunk_size, MPI_UNSIGNED_CHAR, 0,
