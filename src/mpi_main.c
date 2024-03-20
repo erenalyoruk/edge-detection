@@ -5,6 +5,7 @@
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "sobel.h"
 #include "stb_image.h"
@@ -23,11 +24,13 @@ int main(int argc, char* argv[]) {
     if (rank == 0) {
       printf("Usage: %s <input_image> <output_image>\n", argv[0]);
     }
+
     MPI_Finalize();
     return 1;
   }
 
   int width, height;
+
   unsigned char* input_image = NULL;
   unsigned char* output_image = NULL;
 
@@ -52,7 +55,7 @@ int main(int argc, char* argv[]) {
       stbi_image_free(input_image);
 
       MPI_Finalize();
-      return -1;
+      return 1;
     }
 
     printf("Width: %d  Height: %d \n", width, height);
@@ -66,7 +69,11 @@ int main(int argc, char* argv[]) {
   // Calculate the portion of the image to be processed by each process
   int chunk_size = height / size;
   int start_row = rank * chunk_size;
-  int end_row = (rank == size - 1) ? height : (rank + 1) * chunk_size;
+
+  int end_row = (rank + 1) * chunk_size;
+  if (rank == size - 1) {
+    end_row = height;
+  }
 
   // Allocate memory for the portion of the input image
   unsigned char* local_input_image = (unsigned char*)malloc(
@@ -108,14 +115,14 @@ int main(int argc, char* argv[]) {
   }
 
   // Start the timer
-  double start = MPI_Wtime();
+  clock_t start = clock();
 
   // Perform edge detection on the local portion of the image
   apply_sobel_operator(local_input_image, width, end_row - start_row,
                        local_output_image);
 
-  double end = MPI_Wtime();
-  printf("Elapsed time: %lf \n", end - start);
+  clock_t end = clock();
+  printf("Elapsed time: %lf\n", (double)(end - start) / CLOCKS_PER_SEC);
 
   // Gather the results from all processes to the root process
   MPI_Gather(local_output_image, width * chunk_size, MPI_UNSIGNED_CHAR,

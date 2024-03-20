@@ -33,13 +33,21 @@ int main(int argc, char* argv[]) {
   unsigned char* output_image = (unsigned char*)malloc(
       width * height * CHANNEL_NUM * sizeof(unsigned char));
 
+  if (!output_image) {
+    printf("Memory allocation failed.\n");
+
+    stbi_image_free(input_image);
+
+    return 1;
+  }
+
   // start the timer
-  clock_t begin = clock();
+  clock_t start = clock();
 
   apply_sobel_operator(input_image, width, height, output_image);
 
   clock_t end = clock();
-  printf("Elapsed time: %lf \n", (double)(end - begin) / CLOCKS_PER_SEC);
+  printf("Elapsed time: %lf\n", (double)(end - start) / CLOCKS_PER_SEC);
 
   stbi_image_free(input_image);
 
