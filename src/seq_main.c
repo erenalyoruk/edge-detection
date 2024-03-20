@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
   // Chech if image loaded
   if (!input_image) {
     printf("Could not load image: %s", argv[1]);
-    return -1;
+    return 1;
   }
 
   printf("Width: %d  Height: %d \n", width, height);

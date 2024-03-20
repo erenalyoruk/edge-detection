@@ -27,15 +27,17 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  int width, height, bpp;
+  int width, height;
   unsigned char* input_image = NULL;
   unsigned char* output_image = NULL;
 
   if (rank == 0) {
     // Read the input image
-    input_image = stbi_load(argv[1], &width, &height, &bpp, CHANNEL_NUM);
+    input_image = stbi_load(argv[1], &width, &height, NULL, CHANNEL_NUM);
+
     if (!input_image) {
-      printf("Error loading the input image.\n");
+      printf("Could not load image: %s", argv[1]);
+
       MPI_Finalize();
       return 1;
     }
@@ -43,11 +45,14 @@ int main(int argc, char* argv[]) {
     // Allocate memory for the output image
     output_image =
         (unsigned char*)malloc(width * height * sizeof(unsigned char));
+
     if (!output_image) {
       printf("Memory allocation failed.\n");
+
       stbi_image_free(input_image);
+
       MPI_Finalize();
-      return 1;
+      return -1;
     }
 
     printf("Width: %d  Height: %d \n", width, height);
@@ -66,12 +71,15 @@ int main(int argc, char* argv[]) {
   // Allocate memory for the portion of the input image
   unsigned char* local_input_image = (unsigned char*)malloc(
       width * (end_row - start_row) * sizeof(unsigned char));
+
   if (!local_input_image) {
     printf("Memory allocation failed.\n");
+
     if (rank == 0) {
       stbi_image_free(input_image);
       free(output_image);
     }
+
     MPI_Finalize();
     return 1;
   }
@@ -84,26 +92,30 @@ int main(int argc, char* argv[]) {
   // Allocate memory for the portion of the output image
   unsigned char* local_output_image = (unsigned char*)malloc(
       width * (end_row - start_row) * sizeof(unsigned char));
+
   if (!local_output_image) {
     printf("Memory allocation failed.\n");
+
     if (rank == 0) {
       stbi_image_free(input_image);
       free(output_image);
     }
+
     free(local_input_image);
+
     MPI_Finalize();
     return 1;
   }
 
   // Start the timer
-  double time1 = MPI_Wtime();
+  double start = MPI_Wtime();
 
   // Perform edge detection on the local portion of the image
   apply_sobel_operator(local_input_image, width, end_row - start_row,
                        local_output_image);
 
-  double time2 = MPI_Wtime();
-  printf("Elapsed time: %lf \n", time2 - time1);
+  double end = MPI_Wtime();
+  printf("Elapsed time: %lf \n", end - start);
 
   // Gather the results from all processes to the root process
   MPI_Gather(local_output_image, width * chunk_size, MPI_UNSIGNED_CHAR,
