@@ -3,7 +3,6 @@
 
 #include <math.h>
 #include <mpi.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -29,8 +28,8 @@ int main(int argc, char* argv[]) {
   }
 
   int width, height, bpp;
-  uint8_t* input_image = NULL;
-  uint8_t* output_image = NULL;
+  unsigned char* input_image = NULL;
+  unsigned char* output_image = NULL;
 
   if (rank == 0) {
     // Read the input image
@@ -42,7 +41,8 @@ int main(int argc, char* argv[]) {
     }
 
     // Allocate memory for the output image
-    output_image = (uint8_t*)malloc(width * height * sizeof(uint8_t));
+    output_image =
+        (unsigned char*)malloc(width * height * sizeof(unsigned char));
     if (!output_image) {
       printf("Memory allocation failed.\n");
       stbi_image_free(input_image);
@@ -64,8 +64,8 @@ int main(int argc, char* argv[]) {
   int end_row = (rank == size - 1) ? height : (rank + 1) * chunk_size;
 
   // Allocate memory for the portion of the input image
-  uint8_t* local_input_image =
-      (uint8_t*)malloc(width * (end_row - start_row) * sizeof(uint8_t));
+  unsigned char* local_input_image = (unsigned char*)malloc(
+      width * (end_row - start_row) * sizeof(unsigned char));
   if (!local_input_image) {
     printf("Memory allocation failed.\n");
     if (rank == 0) {
@@ -82,8 +82,8 @@ int main(int argc, char* argv[]) {
               MPI_COMM_WORLD);
 
   // Allocate memory for the portion of the output image
-  uint8_t* local_output_image =
-      (uint8_t*)malloc(width * (end_row - start_row) * sizeof(uint8_t));
+  unsigned char* local_output_image = (unsigned char*)malloc(
+      width * (end_row - start_row) * sizeof(unsigned char));
   if (!local_output_image) {
     printf("Memory allocation failed.\n");
     if (rank == 0) {
