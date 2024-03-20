@@ -14,17 +14,25 @@
 #define CHANNEL_NUM 1
 
 int main(int argc, char* argv[]) {
-  int width, height, bpp;
+  int width = 0;
+  int height = 0;
 
   // Reading the image in grey colors
-  uint8_t* input_image = stbi_load(argv[1], &width, &height, &bpp, CHANNEL_NUM);
+  unsigned char* input_image =
+      stbi_load(argv[1], &width, &height, NULL, CHANNEL_NUM);
+
+  // Chech if image loaded
+  if (!input_image) {
+    printf("Could not load image: %s", argv[1]);
+    return -1;
+  }
 
   printf("Width: %d  Height: %d \n", width, height);
   printf("Input: %s , Output: %s  \n", argv[1], argv[2]);
 
   // Allocate memory for the output image
-  uint8_t* output_image =
-      (uint8_t*)malloc(width * height * CHANNEL_NUM * sizeof(uint8_t));
+  unsigned char* output_image = (unsigned char*)malloc(
+      width * height * CHANNEL_NUM * sizeof(unsigned char));
 
   // start the timer
   clock_t begin = clock();
@@ -34,9 +42,10 @@ int main(int argc, char* argv[]) {
   clock_t end = clock();
   printf("Elapsed time: %lf \n", (double)(end - begin) / CLOCKS_PER_SEC);
 
+  stbi_image_free(input_image);
+
   // Storing the image
   stbi_write_jpg(argv[2], width, height, CHANNEL_NUM, output_image, 100);
-  stbi_image_free(input_image);
   free(output_image);
 
   return 0;
