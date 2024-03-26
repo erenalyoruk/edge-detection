@@ -20,9 +20,9 @@ int main(int argc, char* argv[]) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  if (argc < 3) {
+  if (argc != 3) {
     if (rank == 0) {
-      printf("Usage: %s <input_image> <output_image>\n", argv[0]);
+      fprintf(stderr, "Usage: %s <input_image> <output_image>\n", argv[0]);
     }
 
     MPI_Finalize();
@@ -32,125 +32,99 @@ int main(int argc, char* argv[]) {
   int width, height;
 
   unsigned char* input_image = NULL;
-  unsigned char* output_image = NULL;
-
   if (rank == 0) {
-    // Read the input image
     input_image = stbi_load(argv[1], &width, &height, NULL, CHANNEL_NUM);
 
-    if (!input_image) {
-      printf("Could not load image: %s", argv[1]);
+    if (input_image == NULL) {
+      fprintf(stderr, "Failed to load image: %s\n", argv[1]);
 
       MPI_Finalize();
       return 1;
     }
-
-    // Allocate memory for the output image
-    output_image =
-        (unsigned char*)malloc(width * height * sizeof(unsigned char));
-
-    if (!output_image) {
-      printf("Memory allocation failed.\n");
-
-      stbi_image_free(input_image);
-
-      MPI_Finalize();
-      return 1;
-    }
-
-    printf("Width: %d  Height: %d \n", width, height);
-    printf("Input: %s , Output: %s  \n", argv[1], argv[2]);
   }
 
-  // Broadcast image dimensions
   MPI_Bcast(&width, 1, MPI_INT, 0, MPI_COMM_WORLD);
   MPI_Bcast(&height, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-  // Calculate the portion of the image to be processed by each process
-  int chunk_size = height / size;
-  int start_row = rank * chunk_size;
+  int* send_counts = NULL;
+  int* send_displs = NULL;
+  if (rank == 0) {
+    send_counts = (int*)malloc(size * sizeof(int));
+    send_displs = (int*)malloc(size * sizeof(int));
 
-  int end_row = (rank + 1) * chunk_size;
-  if (rank == size - 1) {
-    end_row = height;
+    int offset = 0;
+    int remainder = height % size;
+
+    for (int i = 0; i < size; ++i) {
+      send_counts[i] = (height / size) * width;
+      if (remainder > 0) {
+        send_counts[i] += width;
+        --remainder;
+      }
+
+      send_displs[i] = offset;
+      offset += send_counts[i];
+    }
   }
 
-  // Allocate memory for the portion of the input image
-  unsigned char* local_input_image = (unsigned char*)malloc(
-      width * (end_row - start_row) * sizeof(unsigned char));
+  int local_height = height / size;
+  int remainder = height % size;
+  if (remainder > rank) {
+    ++local_height;
+  }
 
-  if (!local_input_image) {
-    printf("Memory allocation failed.\n");
-
-    if (rank == 0) {
-      stbi_image_free(input_image);
-      free(output_image);
-    }
+  unsigned char* local_image =
+      (unsigned char*)malloc(local_height * width * sizeof(unsigned char));
+  if (local_image == NULL) {
+    fprintf(stderr, "Failed to allocate local image in %d!\n", rank);
 
     MPI_Finalize();
     return 1;
   }
 
-  // Scatter the input image data among processes
-  MPI_Scatter(input_image, width * chunk_size, MPI_UNSIGNED_CHAR,
-              local_input_image, width * chunk_size, MPI_UNSIGNED_CHAR, 0,
-              MPI_COMM_WORLD);
+  MPI_Scatterv(input_image, send_counts, send_displs, MPI_UNSIGNED_CHAR,
+               local_image, local_height * width, MPI_UNSIGNED_CHAR, 0,
+               MPI_COMM_WORLD);
 
-  // Allocate memory for the portion of the output image
-  unsigned char* local_output_image = (unsigned char*)malloc(
-      width * (end_row - start_row) * sizeof(unsigned char));
+  unsigned char* local_output =
+      (unsigned char*)malloc(local_height * width * sizeof(unsigned char));
 
-  if (!local_output_image) {
-    printf("Memory allocation failed.\n");
-
-    if (rank == 0) {
-      stbi_image_free(input_image);
-      free(output_image);
-    }
-
-    free(local_input_image);
-
-    MPI_Finalize();
-    return 1;
-  }
-
-  // Start the timer
   clock_t start = clock();
-
-  // Perform edge detection on the local portion of the image
-  apply_sobel_operator(local_input_image, width, end_row - start_row,
-                       local_output_image);
-
+  apply_sobel_operator(local_image, width, local_height, local_output);
   clock_t end = clock();
-  printf("Rank: %d, Elapsed time: %lf\n", rank,
-         (double)(end - start) / CLOCKS_PER_SEC);
 
-  clock_t total = end - start;
-  clock_t max;
+  double time = ((double)end - start) / CLOCKS_PER_SEC;
+  double max;
 
-  MPI_Reduce(&total, &max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&time, &max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
   if (rank == 0) {
-    printf("Max Elapsed Time: %lf\n", (double)max / CLOCKS_PER_SEC);
+    fprintf(stdout, "Elapsed time: %lf\n", max);
   }
 
-  // Gather the results from all processes to the root process
-  MPI_Gather(local_output_image, width * chunk_size, MPI_UNSIGNED_CHAR,
-             output_image, width * chunk_size, MPI_UNSIGNED_CHAR, 0,
-             MPI_COMM_WORLD);
-
-  // Write the output image
+  unsigned char* output = NULL;
   if (rank == 0) {
-    stbi_write_jpg(argv[2], width, height, CHANNEL_NUM, output_image, 100);
+    output = (unsigned char*)malloc(width * height * sizeof(unsigned char));
+    if (output == NULL) {
+      fprintf(stderr, "Failed to allcoate output image!\n");
 
-    // Free memory
-    stbi_image_free(input_image);
-    free(output_image);
+      MPI_Finalize();
+      return 1;
+    }
   }
 
-  // Free memory
-  free(local_input_image);
-  free(local_output_image);
+  MPI_Gatherv(local_output, local_height * width, MPI_UNSIGNED_CHAR, output,
+              send_counts, send_displs, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD);
+
+  if (rank == 0) {
+    stbi_write_jpg(argv[2], width, height, CHANNEL_NUM, output, 100);
+
+    free(output);
+    free(input_image);
+  }
+
+  free(local_image);
+  free(local_output);
 
   MPI_Finalize();
   return 0;
