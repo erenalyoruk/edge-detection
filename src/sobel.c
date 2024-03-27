@@ -1,39 +1,28 @@
 #include "sobel.h"
 
-static const int SOBEL_KERNEL_X[3][3] = {{-1, 0, 1}, {-2, 0, 2}, {-1, 0, 1}};
-static const int SOBEL_KERNEL_Y[3][3] = {{-1, -2, -1}, {0, 0, 0}, {1, 2, 1}};
-
 void apply_sobel_operator(unsigned char* input_image, int width, int height,
                           unsigned char* output_image) {
-  double gradient = 0.0;
+  for (int y = 1; y < height - 1; y++) {
+    for (int x = 1; x < width - 1; x++) {
+      int gx = input_image[(y - 1) * width + (x + 1)] -
+               input_image[(y - 1) * width + (x - 1)] +
+               2 * input_image[y * width + (x + 1)] -
+               2 * input_image[y * width + (x - 1)] +
+               input_image[(y + 1) * width + (x + 1)] -
+               input_image[(y + 1) * width + (x - 1)];
 
-  // Iterate over the entire image
-  for (int i = 1; i < height - 1; i++) {
-    for (int j = 1; j < width - 1; j++) {
-      int gx = 0;
-      int gy = 0;
+      int gy = input_image[(y - 1) * width + (x - 1)] +
+               2 * input_image[(y - 1) * width + x] +
+               input_image[(y - 1) * width + (x + 1)] -
+               input_image[(y + 1) * width + (x - 1)] -
+               2 * input_image[(y + 1) * width + x] -
+               input_image[(y + 1) * width + (x + 1)];
 
-      // Apply the Sobel operator in horizontal and vertical directions
-      for (int y = -1; y <= 1; y++) {
-        for (int x = -1; x <= 1; x++) {
-          int pixel = input_image[(i + y) * width + (j + x)];
-          gx += pixel * SOBEL_KERNEL_X[y + 1][x + 1];
-          gy += pixel * SOBEL_KERNEL_Y[y + 1][x + 1];
-        }
-      }
+      int magnitude = (int)sqrt(gx * gx + gy * gy);
 
-      // Calculate the gradient magnitude using floating-point arithmetic
-      gradient = sqrt((double)(gx * gx + gy * gy));
+      magnitude = magnitude > 255 ? 255 : magnitude < 0 ? 0 : magnitude;
 
-      // Thresholding
-      if (gradient > 255.0) {
-        gradient = 255.0;
-      } else if (gradient < 0.0) {
-        gradient = 0.0;
-      }
-
-      // Store the result in the output image after converting to unsigned char
-      output_image[i * width + j] = (unsigned char)gradient;
+      output_image[y * width + x] = (unsigned char)magnitude;
     }
   }
 }
