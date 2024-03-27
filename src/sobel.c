@@ -7,8 +7,7 @@ void apply_sobel_operator(unsigned char* input_image, int width, int height,
                           unsigned char* output_image) {
   double gradient = 0.0;
 
-  memset(output_image, 0, width * height);
-
+  // Iterate over the entire image
   for (int i = 1; i < height - 1; i++) {
     for (int j = 1; j < width - 1; j++) {
       int gx = 0;
@@ -23,17 +22,17 @@ void apply_sobel_operator(unsigned char* input_image, int width, int height,
         }
       }
 
-      // Calculate the gradient magnitude
+      // Calculate the gradient magnitude using floating-point arithmetic
       gradient = sqrt((double)(gx * gx + gy * gy));
 
       // Thresholding
-      if (gradient > 255) {
-        gradient = 255;
-      } else if (gradient < 0) {
-        gradient = 0;
+      if (gradient > 255.0) {
+        gradient = 255.0;
+      } else if (gradient < 0.0) {
+        gradient = 0.0;
       }
 
-      // Store the result in the output image
+      // Store the result in the output image after converting to unsigned char
       output_image[i * width + j] = (unsigned char)gradient;
     }
   }
