@@ -15,8 +15,8 @@ make all
 
 ```sh
 # parallel program
-mpiexec -n 4 ./bin/mpi assets/aybu.png image_out.png
+mpiexec -n 4 ./bin/mpi assets/aybu.jpg image_out.jpg
 
 # sequential program
-./bin/seq assets/aybu.png image_out.png
+./bin/seq assets/aybu.jpg image_out.jpg
 ```
